@@ -27,7 +27,6 @@ import {
   ISelectionInfo,
 } from "../highlight/common/selection";
 import * as HTMLUtilities from "../../utils/HTMLUtilities";
-import { addEventListenerOptional } from "../../utils/EventHandler";
 import { Link } from "../../model/Link";
 import { AnnotationMarker, Locations, Locator } from "../../model/Locator";
 import { SHA256 } from "jscrypto/es6/SHA256";
@@ -51,8 +50,6 @@ export class PageBreakModule implements ReaderModule {
   private properties: PageBreakModuleProperties;
 
   private goToPageView: HTMLLIElement;
-  private goToPageNumberInput: HTMLInputElement;
-  private goToPageNumberButton: HTMLButtonElement;
 
   public static async create(config: PageBreakModuleConfig) {
     const pageBreak = new this(
@@ -84,27 +81,6 @@ export class PageBreakModule implements ReaderModule {
         this.headerMenu,
         "#sidenav-section-gotopage"
       );
-    if (this.headerMenu)
-      this.goToPageNumberInput = HTMLUtilities.findElement(
-        this.headerMenu,
-        "#goToPageNumberInput"
-      );
-    if (this.headerMenu)
-      this.goToPageNumberButton = HTMLUtilities.findElement(
-        this.headerMenu,
-        "#goToPageNumberButton"
-      );
-
-    addEventListenerOptional(
-      this.goToPageNumberInput,
-      "keypress",
-      this.goToPageNumber.bind(this)
-    );
-    addEventListenerOptional(
-      this.goToPageNumberButton,
-      "click",
-      this.goToPageNumber.bind(this)
-    );
 
     if (this.goToPageView) {
       if (this.publication.pageList?.length) {
@@ -119,40 +95,34 @@ export class PageBreakModule implements ReaderModule {
         : this.navigator.showLayer("pagebreak");
     }, 10);
   }
-  async goToPageNumber(event: any): Promise<any> {
-    if (
-      this.goToPageNumberInput.value &&
-      (event.key === "Enter" || event.type === "click")
-    ) {
-      var filteredPages = this.publication.pageList?.filter(
-        (el: Link) =>
-          el.Href.slice(el.Href.indexOf("#") + 1).replace(/[^0-9]/g, "") ===
-          this.goToPageNumberInput.value
-      );
-      if (filteredPages && filteredPages.length > 0) {
-        var firstPage = filteredPages[0];
-        let locations: Locations = {
-          progression: 0,
-        };
-        if (firstPage.Href.indexOf("#") !== -1) {
-          const elementId = firstPage.Href.slice(
-            firstPage.Href.indexOf("#") + 1
-          );
-          if (elementId !== null) {
-            locations = {
-              fragment: elementId,
-            };
-          }
-        }
-        const position: Locator = {
-          href: this.publication.getAbsoluteHref(firstPage.Href),
-          locations: locations,
-          type: firstPage.TypeLink,
-          title: firstPage.Title,
-        };
 
-        this.navigator.goTo(position);
+  async goToPageNumber(page: number): Promise<any> {
+    var filteredPages = this.publication.pageList?.filter(
+      (el: Link) =>
+        el.Href.slice(el.Href.indexOf("#") + 1).replace(/[^0-9]/g, "") ===
+        page.toString()
+    );
+    if (filteredPages && filteredPages.length > 0) {
+      var firstPage = filteredPages[0];
+      let locations: Locations = {
+        progression: 0,
+      };
+      if (firstPage.Href.indexOf("#") !== -1) {
+        const elementId = firstPage.Href.slice(firstPage.Href.indexOf("#") + 1);
+        if (elementId !== null) {
+          locations = {
+            fragment: elementId,
+          };
+        }
       }
+      const position: Locator = {
+        href: this.publication.getAbsoluteHref(firstPage.Href),
+        locations: locations,
+        type: firstPage.TypeLink,
+        title: firstPage.Title,
+      };
+
+      this.navigator.goTo(position);
     }
   }
 

@@ -30,7 +30,13 @@
 
     <!-- R2 Reader CSS -->
     <link rel="stylesheet" href="reader.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.7.107/pdf_viewer.css" />
     <script src="reader.js"></script>
+    <style>
+      .textLayer > div {
+          position: absolute;
+      }
+    </style>
 
 </head>
 
@@ -96,7 +102,7 @@
 
     <div class="content" id="root">
         <div id="D2Reader-Container" style="border: solid 5px rebeccapurple;margin-left: 200px;margin-right: 50px">
-            <main style="height: calc(100vh - 10px);" tabindex=-1 id="iframe-wrapper" >
+            <main style="height: calc(100vh - 10px);" tabindex=-1 id="iframe-wrapper" class="pdfViewer">
                 <div id="pdf-container" style="height: calc(100vh - 10px);overflow:auto;display: flex;align-items: center;"></div>
             </main>
         </div>

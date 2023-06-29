@@ -319,7 +319,8 @@ export class PDFNavigator extends EventEmitter implements Navigator {
   }
 
   goTo(locator: Locator): void {
-    const url = new URL(locator.href);
+    const href = this.publication.getAbsoluteHref(locator.href);
+    const url = new URL(href);
     if (url.searchParams.has("start")) {
       const page = url.searchParams.get("start");
       if (page) {

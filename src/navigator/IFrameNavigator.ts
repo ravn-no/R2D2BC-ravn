@@ -317,6 +317,7 @@ export class IFrameNavigator extends EventEmitter implements Navigator {
   sample?: SampleRead;
   requestConfig?: RequestConfig;
   private didInitKeyboardEventHandler: boolean = false;
+  px_ratio: number;
 
   public static async create(
     config: IFrameNavigatorConfig
@@ -582,6 +583,10 @@ export class IFrameNavigator extends EventEmitter implements Navigator {
             this.settings.columnCount !== 1 &&
             !window.matchMedia("screen and (max-width: 600px)").matches
           ) {
+            this.px_ratio =
+              window.devicePixelRatio ||
+              window.screen.availWidth / document.documentElement.clientWidth;
+
             let secondSpread = document.createElement("div");
             this.spreads.appendChild(secondSpread);
             let iframe2 = document.createElement("iframe");
@@ -2589,22 +2594,30 @@ export class IFrameNavigator extends EventEmitter implements Navigator {
           }
         }
 
-        var widthRatio =
-          (parseInt(getComputedStyle(iframeParent).width) - 100) /
-          (this.iframes.length === 2
-            ? parseInt(width?.replace("px", "")) * 2 + 200
-            : parseInt(width?.replace("px", "")));
-        var heightRatio =
-          (parseInt(getComputedStyle(iframeParent).height) - 100) /
-          parseInt(height?.replace("px", ""));
-        var scale = Math.min(widthRatio, heightRatio);
-        iframeParent.style.transform = "scale(" + scale + ")";
+        const newPx_ratio =
+          window.devicePixelRatio ||
+          window.screen.availWidth / document.documentElement.clientWidth;
 
-        for (const iframe of this.iframes) {
-          iframe.style.height = height;
-          iframe.style.width = width;
-          if (iframe.parentElement) {
-            iframe.parentElement.style.height = height;
+        if (newPx_ratio !== this.px_ratio) {
+          this.px_ratio = newPx_ratio;
+        } else {
+          var widthRatio =
+            (parseInt(getComputedStyle(iframeParent).width) - 100) /
+            (this.iframes.length === 2
+              ? parseInt(width?.replace("px", "")) * 2 + 200
+              : parseInt(width?.replace("px", "")));
+          var heightRatio =
+            (parseInt(getComputedStyle(iframeParent).height) - 100) /
+            parseInt(height?.replace("px", ""));
+          var scale = Math.min(widthRatio, heightRatio);
+          iframeParent.style.transform = "scale(" + scale + ")";
+
+          for (const iframe of this.iframes) {
+            iframe.style.height = height;
+            iframe.style.width = width;
+            if (iframe.parentElement) {
+              iframe.parentElement.style.height = height;
+            }
           }
         }
       }

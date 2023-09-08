@@ -218,8 +218,8 @@ export class PDFNavigator extends EventEmitter implements Navigator {
         .then(function (textContent) {
           // Pass the data to the method for rendering of text over the pdf canvas.
           return renderTextLayer({
-            textContentStream: textContent,
-            container: (textLayer as unknown) as DocumentFragment,
+            textContentSource: textContent,
+            container: textLayer,
             viewport: viewport,
             textDivs: [],
           });

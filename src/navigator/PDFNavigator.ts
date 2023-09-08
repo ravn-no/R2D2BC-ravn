@@ -3,7 +3,7 @@ import Navigator from "./Navigator";
 import { UserSettings } from "../model/user-settings/UserSettings";
 import { Publication } from "../model/Publication";
 import { Locator } from "../model/Locator";
-import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
+import { getDocument, GlobalWorkerOptions, renderTextLayer } from "pdfjs-dist";
 import {
   addEventListenerOptional,
   removeEventListenerOptional,
@@ -83,7 +83,7 @@ export class PDFNavigator extends EventEmitter implements Navigator {
     this.resourceIndex = 0;
     this.resource = this.publication.readingOrder[this.resourceIndex];
 
-    GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.worker.js`;
+    GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.7.107/pdf.worker.js`;
     this.wrapper = HTMLUtilities.findRequiredElement(
       this.mainElement,
       "main#iframe-wrapper"
@@ -144,12 +144,26 @@ export class PDFNavigator extends EventEmitter implements Navigator {
     this.pdfContainer.style.flexDirection = "column";
 
     let collection = document.getElementsByTagName("canvas");
-    Array.from(collection).forEach(function (element) {
+    Array.from(collection).forEach(function(element) {
+      element?.parentNode?.removeChild(element);
+    });
+    let tmp = document.querySelectorAll(".page");
+    Array.from(tmp).forEach(function(element) {
       element?.parentNode?.removeChild(element);
     });
 
     function renderPage(page) {
+      let textContainer = document.createElement("div");
+      textContainer.classList.add("textWrapper");
+      let canvasContainer = document.createElement("div");
+      canvasContainer.classList.add("canvasWrapper");
+      let pageContainer = document.createElement("div");
+      pageContainer.classList.add("page");
+
       const canvas = document.createElement("canvas");
+      const textLayer = document.createElement("div");
+
+      textLayer.classList.add("textLayer");
       canvas.id = String(currentPage);
       canvas.style.border = "1px solid gray";
       canvas.style.margin = "1px";
@@ -167,9 +181,15 @@ export class PDFNavigator extends EventEmitter implements Navigator {
           viewport = page.getViewport({ scale: fitWidth });
         }
       }
+      self.pdfContainer.style.setProperty("--scale-factor", String(viewport.scale));
 
       // append the created canvas to the container
-      self.pdfContainer.appendChild(canvas);
+      textContainer.appendChild(textLayer);
+      canvasContainer.appendChild(canvas);
+      pageContainer.appendChild(canvasContainer);
+      pageContainer.appendChild(textContainer);
+      self.pdfContainer.appendChild(pageContainer);
+
       // Get context of the canvas
       const context = canvas.getContext("2d");
       canvas.height = viewport.height;
@@ -187,7 +207,18 @@ export class PDFNavigator extends EventEmitter implements Navigator {
 
       const renderTask = page.render(renderContext);
 
-      renderTask.promise.then(function () {
+      renderTask.promise.then(function() {
+        // Get text-fragments
+        return page.getTextContent();
+      }).then(function(textContent) {
+        // Pass the data to the method for rendering of text over the pdf canvas.
+        return renderTextLayer({
+          textContentSource: textContent,
+          container: textLayer,
+          viewport: viewport,
+          textDivs: []
+        });
+      }).then(function() {
         if (currentPage < self.pdfDoc.numPages) {
           currentPage++;
           self.pdfDoc.getPage(currentPage).then(renderPage);
@@ -288,7 +319,8 @@ export class PDFNavigator extends EventEmitter implements Navigator {
   }
 
   goTo(locator: Locator): void {
-    const url = new URL(locator.href);
+    const href = this.publication.getAbsoluteHref(locator.href);
+    const url = new URL(href);
     if (url.searchParams.has("start")) {
       const page = url.searchParams.get("start");
       if (page) {

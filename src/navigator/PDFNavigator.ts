@@ -144,11 +144,11 @@ export class PDFNavigator extends EventEmitter implements Navigator {
     this.pdfContainer.style.flexDirection = "column";
 
     let collection = document.getElementsByTagName("canvas");
-    Array.from(collection).forEach(function(element) {
+    Array.from(collection).forEach(function (element) {
       element?.parentNode?.removeChild(element);
     });
     let tmp = document.querySelectorAll(".page");
-    Array.from(tmp).forEach(function(element) {
+    Array.from(tmp).forEach(function (element) {
       element?.parentNode?.removeChild(element);
     });
 
@@ -181,7 +181,10 @@ export class PDFNavigator extends EventEmitter implements Navigator {
           viewport = page.getViewport({ scale: fitWidth });
         }
       }
-      self.pdfContainer.style.setProperty("--scale-factor", String(viewport.scale));
+      self.pdfContainer.style.setProperty(
+        "--scale-factor",
+        String(viewport.scale)
+      );
 
       // append the created canvas to the container
       textContainer.appendChild(textLayer);
@@ -207,29 +210,32 @@ export class PDFNavigator extends EventEmitter implements Navigator {
 
       const renderTask = page.render(renderContext);
 
-      renderTask.promise.then(function() {
-        // Get text-fragments
-        return page.getTextContent();
-      }).then(function(textContent) {
-        // Pass the data to the method for rendering of text over the pdf canvas.
-        return renderTextLayer({
-          textContentSource: textContent,
-          container: textLayer,
-          viewport: viewport,
-          textDivs: []
+      renderTask.promise
+        .then(function () {
+          // Get text-fragments
+          return page.getTextContent();
+        })
+        .then(function (textContent) {
+          // Pass the data to the method for rendering of text over the pdf canvas.
+          return renderTextLayer({
+            textContentStream: textContent,
+            container: (textLayer as unknown) as DocumentFragment,
+            viewport: viewport,
+            textDivs: [],
+          });
+        })
+        .then(function () {
+          if (currentPage < self.pdfDoc.numPages) {
+            currentPage++;
+            self.pdfDoc.getPage(currentPage).then(renderPage);
+          } else {
+            // Callback function here, which will trigger when all pages are loaded
+            document.getElementById(String(num))?.scrollIntoView();
+            pdfload!.style.display = "none";
+            if (self.api?.resourceReady) self.api?.resourceReady();
+            self.emit("resource.ready");
+          }
         });
-      }).then(function() {
-        if (currentPage < self.pdfDoc.numPages) {
-          currentPage++;
-          self.pdfDoc.getPage(currentPage).then(renderPage);
-        } else {
-          // Callback function here, which will trigger when all pages are loaded
-          document.getElementById(String(num))?.scrollIntoView();
-          pdfload!.style.display = "none";
-          if (self.api?.resourceReady) self.api?.resourceReady();
-          self.emit("resource.ready");
-        }
-      });
     }
     this.pdfDoc.getPage(currentPage).then(renderPage);
   }

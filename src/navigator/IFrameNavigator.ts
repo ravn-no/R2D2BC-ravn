@@ -579,14 +579,13 @@ export class IFrameNavigator extends EventEmitter implements Navigator {
         }
 
         if (this.publication.isFixedLayout) {
+          this.px_ratio =
+            window.devicePixelRatio ||
+            window.screen.availWidth / document.documentElement.clientWidth;
           if (
             this.settings.columnCount !== 1 &&
             !window.matchMedia("screen and (max-width: 600px)").matches
           ) {
-            this.px_ratio =
-              window.devicePixelRatio ||
-              window.screen.availWidth / document.documentElement.clientWidth;
-
             let secondSpread = document.createElement("div");
             this.spreads.appendChild(secondSpread);
             let iframe2 = document.createElement("iframe");
@@ -995,7 +994,7 @@ export class IFrameNavigator extends EventEmitter implements Navigator {
           this.view.height =
             BrowserUtilities.getHeight() - 40 - (this.attributes?.margin ?? 0);
           if (this.infoBottom) this.infoBottom.style.removeProperty("display");
-          document.body.onscroll = () => {};
+          document.body.onscroll = () => { };
           if (this.nextChapterBottomAnchorElement)
             this.nextChapterBottomAnchorElement.style.display = "none";
           if (this.previousChapterTopAnchorElement)
@@ -1346,7 +1345,7 @@ export class IFrameNavigator extends EventEmitter implements Navigator {
     } catch (err: unknown) {
       log.error(err);
       this.abortOnError(err);
-      return new Promise<void>((_, reject) => reject(err)).catch(() => {});
+      return new Promise<void>((_, reject) => reject(err)).catch(() => { });
     }
   }
 
@@ -1604,9 +1603,8 @@ export class IFrameNavigator extends EventEmitter implements Navigator {
           const message =
             typeof e === "string"
               ? e
-              : `Injectable failed to load at: ${
-                  "href" in injectable ? injectable.href : injectable.src
-                }`;
+              : `Injectable failed to load at: ${"href" in injectable ? injectable.href : injectable.src
+              }`;
           reject(new Error(message));
         };
       });
@@ -1688,8 +1686,8 @@ export class IFrameNavigator extends EventEmitter implements Navigator {
         e instanceof Error
           ? e
           : typeof e === "string"
-          ? new Error(e)
-          : new Error("An unknown error occurred in the IFrameNavigator.");
+            ? new Error(e)
+            : new Error("An unknown error occurred in the IFrameNavigator.");
       this.api.onError(trueError);
     } else {
       // otherwise just display the standard error UI
@@ -2469,7 +2467,7 @@ export class IFrameNavigator extends EventEmitter implements Navigator {
     }
   }
 
-  private handleClickThrough(_event: MouseEvent | TouchEvent) {}
+  private handleClickThrough(_event: MouseEvent | TouchEvent) { }
 
   private handleInternalLink(event: MouseEvent | TouchEvent) {
     const element = event.target;

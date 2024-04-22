@@ -36,7 +36,7 @@ import { TextHighlighter } from "../highlight/TextHighlighter";
 import { HighlightType, IHighlight } from "../highlight/common/highlight";
 import { uniqueCssSelector } from "../highlight/renderer/common/cssselector2";
 import { convertRange } from "../highlight/renderer/iframe/selection";
-import { debounce } from "debounce";
+import debounce from "debounce";
 import {
   _getCssSelectorOptions,
   ISelectionInfo,
@@ -271,9 +271,10 @@ export class TTSModule2 implements ReaderModule {
         let selection = this.highlighter.dom(doc.body).getSelection();
         if (selection.isCollapsed) {
           let doc = self.navigator.iframes[0].contentDocument;
-          const selectionInfo = self.navigator.annotationModule?.annotator?.getTemporarySelectionInfo(
-            doc
-          );
+          const selectionInfo =
+            self.navigator.annotationModule?.annotator?.getTemporarySelectionInfo(
+              doc
+            );
           selection.addRange(selectionInfo.range);
         }
 
@@ -1189,8 +1190,9 @@ export class TTSModule2 implements ReaderModule {
       );
       if (result) {
         this._ttsQueueItemHighlightsWord = result[0];
-        const viewportOffset = (result[1]
-          ?.firstChild as HTMLElement)?.getBoundingClientRect();
+        const viewportOffset = (
+          result[1]?.firstChild as HTMLElement
+        )?.getBoundingClientRect();
         const top = viewportOffset.top - this.wrapper.scrollTop;
         const shouldScroll = top > window.innerHeight / 2 - 65;
 

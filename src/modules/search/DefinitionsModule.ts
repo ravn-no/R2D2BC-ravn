@@ -28,7 +28,7 @@ import {
 import * as lodash from "lodash";
 import { searchDocDomSeek } from "./searchWithDomSeek";
 import { HighlightType, IHighlight } from "../highlight/common/highlight";
-import { debounce } from "debounce";
+import debounce from "debounce";
 import { ISelectionInfo } from "../highlight/common/selection";
 import { SHA256 } from "jscrypto/es6/SHA256";
 import { AnnotationMarker } from "../../model/Locator";
@@ -116,9 +116,8 @@ export class DefinitionsModule implements ReaderModule {
     );
     let tocItem = this.publication.getTOCItem(linkHref);
     if (tocItem === undefined && this.publication.readingOrder) {
-      tocItem = this.publication.readingOrder[
-        this.navigator.currentResource() ?? 0
-      ];
+      tocItem =
+        this.publication.readingOrder[this.navigator.currentResource() ?? 0];
     }
     let localSearchDefinitions: any = [];
 
@@ -183,9 +182,10 @@ export class DefinitionsModule implements ReaderModule {
 
         if (this.api?.visible) {
           result.forEach((highlight) => {
-            let highlightParent = this.navigator.iframes[0].contentDocument?.querySelector(
-              `#${highlight.id}`
-            );
+            let highlightParent =
+              this.navigator.iframes[0].contentDocument?.querySelector(
+                `#${highlight.id}`
+              );
             const highlightFragments = highlightParent?.querySelectorAll(
               `.${CLASS_HIGHLIGHT_AREA}`
             );
@@ -257,9 +257,11 @@ export class DefinitionsModule implements ReaderModule {
         highlightDom.dataset.order = String(item.order);
         highlight.definition = item;
         highlight.position = parseInt(
-          ((highlightDom?.hasChildNodes()
-            ? highlightDom.childNodes[0]
-            : highlightDom) as HTMLDivElement).style.top.replace("px", "")
+          (
+            (highlightDom?.hasChildNodes()
+              ? highlightDom.childNodes[0]
+              : highlightDom) as HTMLDivElement
+          ).style.top.replace("px", "")
         );
       }
       return highlight;

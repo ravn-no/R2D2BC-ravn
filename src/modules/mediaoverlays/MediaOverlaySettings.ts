@@ -428,9 +428,9 @@ export class MediaOverlaySettings implements IMediaOverlayUserSettings {
   }
   increase(incremental: MediaOverlayIncrementable) {
     if (incremental === "mo_volume") {
-      (this.userProperties.getByRef(
-        MEDIAOVERLAYREFS.VOLUME_REF
-      ) as Incremental).increment();
+      (
+        this.userProperties.getByRef(MEDIAOVERLAYREFS.VOLUME_REF) as Incremental
+      ).increment();
       this.volume = this.userProperties.getByRef(
         MEDIAOVERLAYREFS.VOLUME_REF
       )?.value;
@@ -440,9 +440,9 @@ export class MediaOverlaySettings implements IMediaOverlayUserSettings {
       }
       this.settingsChangeCallback();
     } else if (incremental === "mo_rate") {
-      (this.userProperties.getByRef(
-        MEDIAOVERLAYREFS.RATE_REF
-      ) as Incremental).increment();
+      (
+        this.userProperties.getByRef(MEDIAOVERLAYREFS.RATE_REF) as Incremental
+      ).increment();
       this.rate = this.userProperties.getByRef(
         MEDIAOVERLAYREFS.RATE_REF
       )?.value;
@@ -456,9 +456,9 @@ export class MediaOverlaySettings implements IMediaOverlayUserSettings {
 
   decrease(incremental: MediaOverlayIncrementable) {
     if (incremental === "mo_volume") {
-      (this.userProperties.getByRef(
-        MEDIAOVERLAYREFS.VOLUME_REF
-      ) as Incremental).decrement();
+      (
+        this.userProperties.getByRef(MEDIAOVERLAYREFS.VOLUME_REF) as Incremental
+      ).decrement();
       this.volume = this.userProperties.getByRef(
         MEDIAOVERLAYREFS.VOLUME_REF
       )?.value;
@@ -468,9 +468,9 @@ export class MediaOverlaySettings implements IMediaOverlayUserSettings {
       }
       this.settingsChangeCallback();
     } else if (incremental === "mo_rate") {
-      (this.userProperties.getByRef(
-        MEDIAOVERLAYREFS.RATE_REF
-      ) as Incremental).decrement();
+      (
+        this.userProperties.getByRef(MEDIAOVERLAYREFS.RATE_REF) as Incremental
+      ).decrement();
       this.rate = this.userProperties.getByRef(
         MEDIAOVERLAYREFS.RATE_REF
       )?.value;

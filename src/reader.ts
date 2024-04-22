@@ -150,15 +150,18 @@ export default class D2Reader {
     const store = new LocalStorageStore({
       prefix: publication.manifestUrl,
       useLocalStorage: initialConfig.useLocalStorage ?? false,
+      useStorageType: initialConfig.useStorageType,
     });
 
     const settingsStore = new LocalStorageStore({
       prefix: "r2d2bc-reader",
       useLocalStorage: initialConfig.useLocalStorage ?? false,
+      useStorageType: initialConfig.useStorageType,
     });
     const layerStore = new LocalStorageStore({
       prefix: "r2d2bc-layers",
       useLocalStorage: initialConfig.useLocalStorage ?? false,
+      useStorageType: initialConfig.useStorageType,
     });
 
     const annotator = new LocalAnnotator({ store: store });
@@ -519,6 +522,16 @@ export default class D2Reader {
   addAnnotation = async (highlight: Annotation) => {
     return (await this.annotationModule?.addAnnotation(highlight)) ?? false;
   };
+  /** 
+   * Update annotation
+   * 
+   * This should be used only when the add/delete of the annotation note
+   * is not directly handled in the `addAnnotation`/`addCommentToAnnotation`
+   * callback defined in the configuration of the D2Reader.load() method
+   *  */
+  updateAnnotation = async (highlight: Annotation) => {
+    return (await this.annotationModule?.updateAnnotation(highlight)) ?? false;
+  };
 
   /** Hide Annotation Layer */
   hideAnnotationLayer = () => {
@@ -573,6 +586,14 @@ export default class D2Reader {
   get tableOfContents() {
     return convertAndCamel(this.navigator.tableOfContents()) ?? [];
   }
+  /** Landmarks */
+  get landmarks() {
+    return convertAndCamel(this.navigator.landmarks()) ?? [];
+  }
+  /** Page List */
+  get pageList() {
+    return convertAndCamel(this.navigator.pageList()) ?? [];
+  }
   /** Reading Order or Spine */
   get readingOrder() {
     return convertAndCamel(this.navigator.readingOrder()) ?? [];
@@ -584,6 +605,10 @@ export default class D2Reader {
   /** Current Annotations */
   get annotations() {
     return this.annotationModule?.getAnnotations();
+  }
+
+  get publicationLayout() {
+    return this.navigator.publication.layout;
   }
 
   /** History */

@@ -257,6 +257,8 @@ export class PDFNavigator extends EventEmitter implements Navigator {
   tableOfContents(): any {
     return this.publication.tableOfContents;
   }
+  landmarks(): any {}
+  pageList(): any {}
 
   //TODO:
   currentResource(): any {}

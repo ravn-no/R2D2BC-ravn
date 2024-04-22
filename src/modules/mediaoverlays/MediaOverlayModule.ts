@@ -800,9 +800,10 @@ export class MediaOverlayModule implements ReaderModule {
     if (!classActive) {
       classActive = this.settings.color;
     }
-    const styleAttr = this.navigator.iframes[0].contentDocument?.documentElement.getAttribute(
-      "style"
-    );
+    const styleAttr =
+      this.navigator.iframes[0].contentDocument?.documentElement.getAttribute(
+        "style"
+      );
     const isNight = styleAttr
       ? styleAttr.indexOf("readium-night-on") > 0
       : false;
@@ -817,8 +818,8 @@ export class MediaOverlayModule implements ReaderModule {
         isNight || isSepia
           ? R2_MO_CLASS_ACTIVE
           : classActive
-          ? classActive
-          : R2_MO_CLASS_ACTIVE;
+            ? classActive
+            : R2_MO_CLASS_ACTIVE;
     }
 
     if (this.pid) {

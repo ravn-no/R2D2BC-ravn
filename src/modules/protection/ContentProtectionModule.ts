@@ -24,14 +24,14 @@ import {
   addEventListenerOptional,
   removeEventListenerOptional,
 } from "../../utils/EventHandler";
-import { debounce } from "debounce";
+import debounce from "debounce";
 import { delay } from "../../utils";
-import { getUserAgentRegExp } from "browserslist-useragent-regexp";
 import { addListener, launch } from "devtools-detector";
 import log from "loglevel";
 import { getCurrentSelectionInfo } from "../highlight/renderer/iframe/selection";
 import { uniqueCssSelector } from "../highlight/renderer/common/cssselector2";
 import { _blacklistIdClassForCssSelectors } from "../highlight/TextHighlighter";
+import { getUserAgentRegex } from "browserslist-useragent-regexp";
 
 export interface ContentProtectionModuleProperties {
   enforceSupportedBrowsers: boolean;
@@ -49,6 +49,7 @@ export interface ContentProtectionModuleProperties {
   hideTargetUrl: boolean;
   disableDrag: boolean;
   supportedBrowsers: string[];
+  excludeNodes: string[];
 }
 
 export interface ContentProtectionModuleConfig
@@ -139,7 +140,7 @@ export class ContentProtectionModule implements ReaderModule {
       browsers.push("last 1 " + browser + " version");
     });
 
-    const supportedBrowsers = getUserAgentRegExp({
+    const supportedBrowsers = getUserAgentRegex({
       browsers: browsers,
       allowHigherVersions: true,
     });
@@ -896,36 +897,34 @@ export class ContentProtectionModule implements ReaderModule {
     }
   }
 
-  public async initialize() {
+  public async initialize(iframe: HTMLIFrameElement) {
     if (this.properties?.enableObfuscation) {
       return new Promise<void>(async (resolve) => {
         await (document as any).fonts.ready;
-        for (const iframe of this.navigator.iframes) {
-          if (iframe.contentDocument) {
-            const body = HTMLUtilities.findRequiredIframeElement(
-              iframe.contentDocument,
-              "body"
-            ) as HTMLBodyElement;
-            this.observe();
+        if (iframe.contentDocument) {
+          const body = HTMLUtilities.findRequiredIframeElement(
+            iframe.contentDocument,
+            "body"
+          ) as HTMLBodyElement;
+          this.observe();
 
-            setTimeout(() => {
-              this.rects = this.findRects(body);
-              this.rects.forEach((rect) =>
-                this.toggleRect(rect, this.securityContainer, this.isHacked)
+          setTimeout(() => {
+            this.rects = this.findRects(body);
+            this.rects.forEach((rect) =>
+              this.toggleRect(rect, this.securityContainer, this.isHacked)
+            );
+
+            this.setupEvents();
+            if (!this.hasEventListener) {
+              this.hasEventListener = true;
+              addEventListenerOptional(
+                this.wrapper,
+                "scroll",
+                this.handleScroll.bind(this)
               );
-
-              this.setupEvents();
-              if (!this.hasEventListener) {
-                this.hasEventListener = true;
-                addEventListenerOptional(
-                  this.wrapper,
-                  "scroll",
-                  this.handleScroll.bind(this)
-                );
-              }
-              resolve();
-            }, 10);
-          }
+            }
+            resolve();
+          }, 10);
         }
       });
     }
@@ -936,7 +935,7 @@ export class ContentProtectionModule implements ReaderModule {
       this.toggleRect(rect, this.securityContainer, this.isHacked)
     );
   }
-  handleResize() {
+  async handleResize() {
     if (this.properties?.enableObfuscation) {
       const onDoResize = debounce(() => {
         this.calcRects(this.rects);
@@ -945,7 +944,7 @@ export class ContentProtectionModule implements ReaderModule {
             this.toggleRect(rect, this.securityContainer, this.isHacked)
           );
         }
-      }, 10);
+      }, 50);
       if (this.rects) {
         this.observe();
         onDoResize();
@@ -1046,9 +1045,10 @@ export class ContentProtectionModule implements ReaderModule {
       let selectionInfo = getCurrentSelectionInfo(win, getCssSelector);
       if (selectionInfo === undefined) {
         let doc = this.navigator.iframes[0].contentDocument;
-        selectionInfo = this.navigator.annotationModule?.annotator?.getTemporarySelectionInfo(
-          doc
-        );
+        selectionInfo =
+          this.navigator.annotationModule?.annotator?.getTemporarySelectionInfo(
+            doc
+          );
       }
 
       event.clipboardData.setData(
@@ -1094,9 +1094,10 @@ export class ContentProtectionModule implements ReaderModule {
         let selectionInfo = getCurrentSelectionInfo(win, getCssSelector);
         if (selectionInfo === undefined) {
           let doc = this.navigator.iframes[0].contentDocument;
-          selectionInfo = this.navigator.annotationModule?.annotator?.getTemporarySelectionInfo(
-            doc
-          );
+          selectionInfo =
+            this.navigator.annotationModule?.annotator?.getTemporarySelectionInfo(
+              doc
+            );
         }
         this.copyToClipboard(
           selectionInfo?.cleanText?.substring(
@@ -1123,8 +1124,8 @@ export class ContentProtectionModule implements ReaderModule {
     }
     return true;
   }
-  copyToClipboard(textToClipboard) {
-    textToClipboard = textToClipboard.substring(
+  copyToClipboard(textToClipboard: string | undefined) {
+    textToClipboard = textToClipboard?.substring(
       0,
       this.properties?.charactersToCopy ?? 0
     );
@@ -1371,8 +1372,13 @@ export class ContentProtectionModule implements ReaderModule {
     return textNodes.map((node) => {
       const { top, height, left, width } = this.measureTextNode(node);
       const scrambled =
-        node.parentElement?.nodeName === "option" ||
-        node.parentElement?.nodeName === "script"
+        node.parentElement &&
+        ((this.properties?.excludeNodes &&
+          this.properties?.excludeNodes.indexOf(
+            node.parentElement.nodeName.toLowerCase()
+          ) > -1) ||
+          node.parentElement?.nodeName.toLowerCase() === "option" ||
+          node.parentElement?.nodeName.toLowerCase() === "script")
           ? node.textContent
           : this.obfuscateText(node.textContent ?? "");
       let rect: ContentProtectionRect = {
@@ -1427,8 +1433,27 @@ export class ContentProtectionModule implements ReaderModule {
     const windowRight = windowLeft + this.wrapper.clientWidth;
     const right = rect.left + rect.width;
     const bottom = rect.top + rect.height;
-    const windowTop = this.wrapper.scrollTop;
-    const windowBottom = windowTop + this.wrapper.clientHeight;
+    const windowTop =
+      this.wrapper.scrollTop -
+      (rect.node.parentElement
+        ? parseInt(
+            getComputedStyle(rect.node.parentElement).lineHeight.replace(
+              "px",
+              ""
+            )
+          )
+        : 10);
+    const windowBottom =
+      windowTop +
+      this.wrapper.clientHeight +
+      (rect.node.parentElement
+        ? parseInt(
+            getComputedStyle(rect.node.parentElement).lineHeight.replace(
+              "px",
+              ""
+            )
+          )
+        : 10);
 
     const isAbove = bottom < windowTop;
     const isBelow = rect.top > windowBottom;

@@ -17,7 +17,7 @@
  * Licensed to: Bibliotheca LLC under one or more contributor license agreements.
  */
 
-import { debounce } from "debounce";
+import debounce from "debounce";
 import { IFrameNavigator } from "../../navigator/IFrameNavigator";
 
 export default class SampleReadEventHandler {
@@ -145,7 +145,7 @@ export default class SampleReadEventHandler {
         this.navigator.errorMessage.style.backgroundColor =
           "rgb(255, 255, 255)";
         this.navigator.errorMessage.innerHTML =
-          this.navigator.sample?.popup ?? "";
+          `<span>${this.navigator.sample?.popup}</span>` ?? "";
       }
     } else {
       this.navigator.iframes[0].focus();

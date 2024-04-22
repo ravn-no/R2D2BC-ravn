@@ -140,6 +140,9 @@ export class PageBreakModule implements ReaderModule {
       if (pageBreaks?.length === 0) {
         pageBreaks = body?.querySelectorAll("[epub\\:type='pagebreak']");
       }
+      if (pageBreaks?.length === 0) {
+        pageBreaks = body?.querySelectorAll("[role='doc-pagebreak']");
+      }
       let self = this;
 
       function getCssSelector(element: Element): string {
@@ -237,9 +240,11 @@ export class PageBreakModule implements ReaderModule {
         highlight
       );
       highlight.position = parseInt(
-        ((highlightDom?.hasChildNodes()
-          ? highlightDom.childNodes[0]
-          : highlightDom) as HTMLDivElement).style.top.replace("px", "")
+        (
+          (highlightDom?.hasChildNodes()
+            ? highlightDom.childNodes[0]
+            : highlightDom) as HTMLDivElement
+        ).style.top.replace("px", "")
       );
       return highlight;
     } catch (e) {

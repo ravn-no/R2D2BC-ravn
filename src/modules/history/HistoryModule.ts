@@ -98,10 +98,8 @@ export class HistoryModule implements ReaderModule {
         this.historyForwardAnchorElement &&
         this.historyCurrentIndex + 1 < this.history.length
       ) {
-        this.historyForwardAnchorElement.className = this.historyForwardAnchorElement.className.replace(
-          " disabled",
-          ""
-        );
+        this.historyForwardAnchorElement.className =
+          this.historyForwardAnchorElement.className.replace(" disabled", "");
       } else {
         if (this.historyForwardAnchorElement) {
           this.historyForwardAnchorElement.removeAttribute("href");
@@ -109,10 +107,8 @@ export class HistoryModule implements ReaderModule {
         }
       }
       if (this.historyBackAnchorElement && this.historyCurrentIndex > 0) {
-        this.historyBackAnchorElement.className = this.historyBackAnchorElement.className.replace(
-          " disabled",
-          ""
-        );
+        this.historyBackAnchorElement.className =
+          this.historyBackAnchorElement.className.replace(" disabled", "");
       } else {
         if (this.historyBackAnchorElement) {
           this.historyBackAnchorElement.removeAttribute("href");
@@ -123,11 +119,11 @@ export class HistoryModule implements ReaderModule {
   }
 
   async push(locator: Locator, history: boolean) {
-    let lastInHistory;
     if (history && this.annotator) {
-      let lastReadingPosition = (await this.annotator.getLastReadingPosition()) as
-        | ReadingPosition
-        | undefined;
+      let lastReadingPosition =
+        (await this.annotator.getLastReadingPosition()) as
+          | ReadingPosition
+          | undefined;
       if (lastReadingPosition) {
         const linkHref = this.publication.getAbsoluteHref(
           lastReadingPosition.href
@@ -144,13 +140,24 @@ export class HistoryModule implements ReaderModule {
         ) {
           this.history.push(lastReadingPosition);
           this.historyCurrentIndex = this.history.length - 1;
+        } else {
+          const lastInHistory = this.history[this.history.length - 1];
+          if (
+            (lastInHistory &&
+              lastInHistory.href !== locator.href &&
+              lastInHistory.locations !== locator.locations) ||
+            lastInHistory === undefined
+          ) {
+            this.history.push(lastReadingPosition);
+            this.historyCurrentIndex = this.history.length - 1;
+          }
         }
       }
 
       if (this.historyCurrentIndex < this.history.length - 1) {
         this.history = this.history.slice(0, this.historyCurrentIndex);
       }
-      lastInHistory = this.history[this.history.length - 1];
+      const lastInHistory = this.history[this.history.length - 1];
       if (
         (lastInHistory && lastInHistory.href !== locator.href) ||
         lastInHistory === undefined

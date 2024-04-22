@@ -74,9 +74,8 @@ export class Popup {
   }
 
   async hidePopover() {
-    let footnote = this.navigator.iframes[0].contentDocument?.getElementById(
-      "d2-popover"
-    );
+    let footnote =
+      this.navigator.iframes[0].contentDocument?.getElementById("d2-popover");
     if (footnote) {
       footnote.parentElement?.removeChild(footnote);
     }
@@ -100,9 +99,10 @@ export class Popup {
         event.preventDefault();
         event.stopPropagation();
 
-        let popover = this.navigator.iframes[0].contentDocument?.getElementById(
-          "d2-popover"
-        );
+        let popover =
+          this.navigator.iframes[0].contentDocument?.getElementById(
+            "d2-popover"
+          );
         if (popover) {
           popover.parentElement?.removeChild(popover);
         }
@@ -151,16 +151,21 @@ export class Popup {
           return;
         }
         let self = this;
-        win.onclick = function (ev) {
-          if (event.target !== ev.target) {
-            if (d2popover.parentElement) {
-              self.hidePopover();
-              if (win) {
-                win.onclick = null;
+        win.addEventListener(
+          "click",
+          function (ev) {
+            if (event.target !== ev.target) {
+              if (d2popover.parentElement) {
+                self.hidePopover();
+                ev.stopImmediatePropagation();
               }
             }
+          },
+          {
+            once: true,
+            capture: true,
           }
-        };
+        );
       }
     } else if (src) {
       let absolute = getAbsoluteHref(src);
@@ -168,9 +173,10 @@ export class Popup {
         event.preventDefault();
         event.stopPropagation();
 
-        let popover = this.navigator.iframes[0].contentDocument?.getElementById(
-          "d2-popover"
-        );
+        let popover =
+          this.navigator.iframes[0].contentDocument?.getElementById(
+            "d2-popover"
+          );
         if (popover) {
           popover.parentElement?.removeChild(popover);
         }
@@ -206,24 +212,28 @@ export class Popup {
           return;
         }
         let self = this;
-        win.onclick = function (ev) {
-          if (event.target !== ev.target) {
-            if (d2popover.parentElement) {
-              self.hidePopover();
-              if (win) {
-                win.onclick = null;
+        win.addEventListener(
+          "click",
+          function (ev) {
+            if (event.target !== ev.target) {
+              if (d2popover.parentElement) {
+                self.hidePopover();
+                ev.stopImmediatePropagation();
               }
             }
+          },
+          {
+            once: true,
+            capture: true,
           }
-        };
+        );
       }
     }
   }
 
   showPopup(element: any, event: MouseEvent | TouchEvent) {
-    let footnote = this.navigator.iframes[0].contentDocument?.getElementById(
-      "d2-popup"
-    );
+    let footnote =
+      this.navigator.iframes[0].contentDocument?.getElementById("d2-popup");
     if (footnote) {
       footnote.parentElement?.removeChild(footnote);
     }

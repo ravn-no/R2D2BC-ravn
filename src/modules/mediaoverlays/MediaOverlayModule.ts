@@ -30,6 +30,7 @@ import {
 import * as HTMLUtilities from "../../utils/HTMLUtilities";
 import log from "loglevel";
 
+//log.setLevel("trace", true);
 // Media Overlays
 // Synchronized Narration
 // Synchronized Media
@@ -59,10 +60,17 @@ export interface MediaOverlayModuleConfig extends MediaOverlayModuleProperties {
   api?: MediaOverlayModuleAPI;
 }
 
+interface MediaOverlayBeginEnd {
+    begin?: number,
+    end?: number
+}
+
+
 export class MediaOverlayModule implements ReaderModule {
   private publication: Publication;
   navigator: IFrameNavigator;
   private audioElement: HTMLMediaElement;
+
   settings: MediaOverlaySettings;
   private properties: MediaOverlayModuleProperties;
   private play: HTMLLinkElement = HTMLUtilities.findElement(
@@ -82,6 +90,7 @@ export class MediaOverlayModule implements ReaderModule {
   private previousAudioUrl: string | undefined;
   private previousAudioEnd: number | undefined;
   private mediaOverlayRoot: MediaOverlayNode | undefined;
+  private mediaOverlayGenerator: IterableIterator<MediaOverlayNode | undefined> | undefined;
   private mediaOverlayTextAudioPair: MediaOverlayNode | undefined;
   private pid: string | undefined = undefined;
   private __ontimeupdate = false;
@@ -174,13 +183,13 @@ export class MediaOverlayModule implements ReaderModule {
       const hrefUrlObj = new URL("https://dita.digital/" + href);
 
       await this.playMediaOverlays(
-        hrefUrlObj.pathname.substr(1),
+        hrefUrlObj.pathname.substring(1),
         link.MediaOverlays,
         undefined
       );
     } else {
       if (this.audioElement) {
-        await this.audioElement.pause();
+        this.audioElement.pause();
       }
       if (this.currentLinks.length > 1 && this.currentLinkIndex === 0) {
         this.currentLinkIndex++;
@@ -188,7 +197,7 @@ export class MediaOverlayModule implements ReaderModule {
       } else {
         if (this.settings.autoTurn && this.settings.playing) {
           if (this.audioElement) {
-            await this.audioElement.pause();
+            this.audioElement.pause();
           }
           this.navigator.nextResource();
         } else {
@@ -201,6 +210,34 @@ export class MediaOverlayModule implements ReaderModule {
   async startReadAloud() {
     if (this.navigator.rights.enableMediaOverlays) {
       this.settings.playing = true;
+      if (
+        this.audioElement &&
+        this.currentLinks[this.currentLinkIndex]?.Properties.MediaOverlay
+      ) {
+        log.log("startReadAloud(): audioElement finnes");
+        const timeToSeekTo = this.currentAudioBegin
+          ? this.currentAudioBegin
+          : 0;
+        this.audioElement.currentTime = timeToSeekTo;
+        log.log("startReadAloud() currentTime = ", timeToSeekTo);
+        await this.audioElement.play();
+        this.ensureOnTimeUpdate(false, true);
+        this.audioElement.volume = this.settings.volume;
+        this.audioElement.playbackRate = this.settings.rate;
+      } else {
+        log.log("startReadAloud(): audioElement finnes ikke");
+        if (this.currentLinks.length > 1 && this.currentLinkIndex === 0) {
+          this.currentLinkIndex++;
+          log.log("startReadAloud(): kaller playLink()");
+          await this.playLink();
+        } else {
+          if (this.settings.autoTurn && this.settings.playing) {
+            this.navigator.nextResource();
+          } else {
+            await this.stopReadAloud();
+          }
+        }
+      }
       if (
         this.audioElement &&
         this.currentLinks[this.currentLinkIndex]?.Properties.MediaOverlay
@@ -229,11 +266,13 @@ export class MediaOverlayModule implements ReaderModule {
       if (this.pause) this.pause.style.removeProperty("display");
     }
   }
+
   async stopReadAloud() {
     if (this.navigator.rights.enableMediaOverlays) {
       this.settings.playing = false;
 
       if (this.audioElement) this.audioElement.pause();
+      this.ensureOnTimeUpdate(true, false);
 
       if (this.play) this.play.style.removeProperty("display");
       if (this.pause) this.pause.style.display = "none";
@@ -242,7 +281,7 @@ export class MediaOverlayModule implements ReaderModule {
   pauseReadAloud() {
     if (this.navigator.rights.enableMediaOverlays) {
       this.settings.playing = false;
-      this.audioElement.pause();
+      if (this.audioElement) this.audioElement.pause();
       if (this.play) this.play.style.removeProperty("display");
       if (this.pause) this.pause.style.display = "none";
     }
@@ -256,6 +295,51 @@ export class MediaOverlayModule implements ReaderModule {
     }
   }
 
+  private getUrlNoQuery(mo: MediaOverlayNode) : string {
+    const urlObjFull = new URL(
+      mo.Audio,
+      this.publication.manifestUrl
+    );
+    const urlFull = urlObjFull.toString();
+
+    const urlObjNoQuery = new URL(urlFull);
+    urlObjNoQuery.hash = "";
+    urlObjNoQuery.search = "";
+    return urlObjNoQuery.toString();
+  }
+
+  private getBeginEndFromNode(mo: MediaOverlayNode) : MediaOverlayBeginEnd {
+    let ret: MediaOverlayBeginEnd  = {};
+    if (!mo.Audio) {
+      return ret;
+    }
+    const urlObjFull = new URL(
+      mo.Audio,
+      this.publication.manifestUrl
+    );
+    //const urlFull = urlObjFull.toString();
+    if (urlObjFull.hash) {
+      const matches = urlObjFull.hash.match(/t=([0-9.]+)(,([0-9.]+))?/);
+      if (matches && matches.length >= 1) {
+        const b = matches[1];
+        try {
+          ret.begin = parseFloat(b);
+        } catch (err) {
+          log.error(err);
+        }
+        if (matches.length >= 3) {
+          const e = matches[3];
+          try {
+            ret.end = parseFloat(e);
+          } catch (err) {
+            log.error(err);
+          }
+        }
+      }
+    }
+    return ret;
+  }
+
   findDepthFirstTextAudioPair(
     textHref: string,
     mo: MediaOverlayNode,
@@ -267,12 +351,11 @@ export class MediaOverlayModule implements ReaderModule {
     let isFragmentIDMatch: boolean | undefined;
     if (mo.Text) {
       const hrefUrlObj = new URL("https://dita.digital/" + mo.Text);
-      if (hrefUrlObj.pathname.substr(1) === textHref) {
+      if (hrefUrlObj.pathname.substring(1) === textHref) {
         isTextUrlMatch = true;
-
         if (hrefUrlObj.hash && textFragmentIDChain) {
           isFragmentIDMatch = false;
-          const id = hrefUrlObj.hash.substr(1);
+          const id = hrefUrlObj.hash.substring(1);
           for (const frag of textFragmentIDChain) {
             if (frag === id) {
               isFragmentIDMatch = true;
@@ -347,10 +430,10 @@ export class MediaOverlayModule implements ReaderModule {
           this.audioElement.currentTime >= this.currentAudioEnd - 0.05
         ) {
           log.log("ontimeupdate - mediaOverlaysNext()");
-          this.mediaOverlaysNext();
+          this.mediaOverlaysNext(this.audioElement.currentTime);
         }
         const match_i = this.mediaOverlayTextAudioPair.Text.lastIndexOf("#");
-        const match_id = this.mediaOverlayTextAudioPair.Text.substr(
+        const match_id = this.mediaOverlayTextAudioPair.Text.substring(
           match_i + 1
         );
 
@@ -361,16 +444,21 @@ export class MediaOverlayModule implements ReaderModule {
     }
   }
 
-  mediaOverlaysNext(escape?: boolean) {
-    log.log("mediaOverlaysNext()");
-
+  mediaOverlaysNext(currentTime: number) {
+    log.log("mediaOverlaysNext(), currentTime=", currentTime);
     if (this.mediaOverlayRoot && this.mediaOverlayTextAudioPair) {
-      const nextTextAudioPair = this.findNextTextAudioPair(
-        this.mediaOverlayRoot,
-        this.mediaOverlayTextAudioPair,
-        { prev: undefined },
-        escape ? true : false
-      );
+      // find next text audio pair where pair.end > currentTime
+      let nextTextAudioPair: MediaOverlayNode | undefined;
+      while (true) {
+        nextTextAudioPair = (this.mediaOverlayGenerator as IterableIterator<MediaOverlayNode>).next().value;
+        if (!nextTextAudioPair) {
+          break;
+        }
+        let beginEnd = this.getBeginEndFromNode(nextTextAudioPair);
+        if (!beginEnd.end || beginEnd.end > currentTime) {
+          break;
+        }
+      }
       if (!nextTextAudioPair) {
         log.log("mediaOverlaysNext() - navLeftOrRight()");
         this.mediaOverlaysStop();
@@ -412,7 +500,7 @@ export class MediaOverlayModule implements ReaderModule {
           log.log("mediaOverlaysNext() - playMediaOverlaysAudio()");
           setTimeout(async () => {
             await this.playMediaOverlaysAudio(
-              nextTextAudioPair,
+              (nextTextAudioPair as MediaOverlayNode),
               undefined,
               undefined
             );
@@ -437,12 +525,14 @@ export class MediaOverlayModule implements ReaderModule {
       }
     }
   }
+
   mediaOverlaysStop() {
     log.log("mediaOverlaysStop()");
 
     this.mediaOverlaysPause();
 
     this.mediaOverlayRoot = undefined;
+    this.mediaOverlayGenerator = undefined;
     this.mediaOverlayTextAudioPair = undefined;
   }
   mediaOverlaysPause() {
@@ -454,96 +544,47 @@ export class MediaOverlayModule implements ReaderModule {
       this.audioElement.pause();
     }
   }
-  findNextTextAudioPair(
-    mo: MediaOverlayNode,
-    moToMatch: MediaOverlayNode,
-    previousMo: { prev: MediaOverlayNode | undefined },
-    escape: boolean
-  ): MediaOverlayNode | undefined | null {
-    if (!mo.Children || !mo.Children.length) {
-      if (previousMo?.prev === moToMatch) {
-        log.log("findNextTextAudioPair() - prevMo === moToMatch");
-        return mo;
-      }
-      log.log("findNextTextAudioPair() - set previous");
-      log.log(JSON.stringify(mo));
-      previousMo.prev = mo;
-      return undefined;
-    }
-    for (const child of mo.Children) {
-      log.log("findNextTextAudioPair() - child");
-      log.log(JSON.stringify(child));
-      const match = this.findNextTextAudioPair(
-        child,
-        moToMatch,
-        previousMo,
-        escape
-      );
-      if (match) {
-        log.log("findNextTextAudioPair() - match");
-        log.log(JSON.stringify(match));
-        return match;
+
+  // generator function to yield all elements in the mo tree
+  *textAudioPairGenerator(
+    mo: MediaOverlayNode
+  ): IterableIterator<MediaOverlayNode | undefined>  {
+    if (!mo.hasOwnProperty("Children") || !mo.Children.length) {
+      yield mo;
+    } else {
+      for (const child of mo.Children) {
+        yield *this.textAudioPairGenerator(child);
       }
     }
-    return undefined;
   }
+
   async playMediaOverlaysAudio(
     moTextAudioPair: MediaOverlayNode,
     begin: number | undefined,
     end: number | undefined
   ) {
     log.log("playMediaOverlaysAudio()");
-
     this.mediaOverlayTextAudioPair = moTextAudioPair;
 
     if (!moTextAudioPair.Audio) {
       return; // TODO TTS
     }
 
-    const urlObjFull = new URL(
-      moTextAudioPair.Audio,
-      this.publication.manifestUrl
-    );
-    const urlFull = urlObjFull.toString();
-
-    const urlObjNoQuery = new URL(urlFull);
-    urlObjNoQuery.hash = "";
-    urlObjNoQuery.search = "";
-    const urlNoQuery = urlObjNoQuery.toString();
-
+    this.previousAudioEnd = this.currentAudioEnd;
     const hasBegin = typeof begin !== "undefined";
     const hasEnd = typeof end !== "undefined";
-
-    this.previousAudioEnd = this.currentAudioEnd;
-    this.currentAudioBegin = undefined;
-    this.currentAudioEnd = undefined;
-
     if (!hasBegin && !hasEnd) {
-      if (urlObjFull.hash) {
-        const matches = urlObjFull.hash.match(/t=([0-9.]+)(,([0-9.]+))?/);
-        if (matches && matches.length >= 1) {
-          const b = matches[1];
-          try {
-            this.currentAudioBegin = parseFloat(b);
-          } catch (err) {
-            log.error(err);
-          }
-          if (matches.length >= 3) {
-            const e = matches[3];
-            try {
-              this.currentAudioEnd = parseFloat(e);
-            } catch (err) {
-              log.error(err);
-            }
-          }
-        }
-      }
+      let beginEnd: MediaOverlayBeginEnd = this.getBeginEndFromNode(moTextAudioPair);
+      this.currentAudioBegin = beginEnd.begin;
+      this.currentAudioEnd = beginEnd.end;
     } else {
       this.currentAudioBegin = begin;
       this.currentAudioEnd = end;
     }
+    let urlNoQuery = this.getUrlNoQuery(moTextAudioPair);
+
     log.log(
-      `${urlFull} => [${this.currentAudioBegin}-${this.currentAudioEnd}]`
+      `playMediaOverlaysAudio() [${urlNoQuery}] => [${this.currentAudioBegin}-${this.currentAudioEnd}]`
     );
 
     const playClip = async (initial: boolean) => {
@@ -569,7 +610,7 @@ export class MediaOverlayModule implements ReaderModule {
               if (!self.settings.resourceReady) {
                 setTimeout(checkReady, 200);
               } else {
-                /* do something*/
+                /* do something */
                 setTimeout(async () => {
                   await self.audioElement.play();
                   self.ensureOnTimeUpdate(false, true);
@@ -599,7 +640,7 @@ export class MediaOverlayModule implements ReaderModule {
                   if (!self.settings.resourceReady) {
                     setTimeout(checkReady, 200);
                   } else {
-                    /* do something*/
+                    /* do something */
                     setTimeout(async () => {
                       await self.audioElement.play();
                       self.ensureOnTimeUpdate(false, true);
@@ -617,9 +658,7 @@ export class MediaOverlayModule implements ReaderModule {
         const contiguous =
           this.previousAudioUrl === this.currentAudioUrl &&
           typeof this.previousAudioEnd !== "undefined" &&
-          this.previousAudioEnd > timeToSeekTo - 0.02 &&
-          this.previousAudioEnd <= timeToSeekTo &&
-          this.audioElement.currentTime >= timeToSeekTo - 0.1;
+          Math.abs(this.previousAudioEnd - this.audioElement.currentTime) <= 2;
         this.ensureOnTimeUpdate(false, false);
         if (contiguous) {
           log.log("playMediaOverlaysAudio() - playClip() - ensureOnTimeUpdate");
@@ -668,7 +707,7 @@ export class MediaOverlayModule implements ReaderModule {
             (this.currentAudioUrl !== (ev.currentTarget as HTMLAudioElement).src
               ? this.currentAudioUrl + " -- "
               : "") +
-            (ev.currentTarget as HTMLAudioElement).src.substr(
+            (ev.currentTarget as HTMLAudioElement).src.substring(
               (ev.currentTarget as HTMLAudioElement).src.lastIndexOf("/")
             )
         );
@@ -717,6 +756,7 @@ export class MediaOverlayModule implements ReaderModule {
       await playClip(false);
     }
   }
+
   async playMediaOverlays(
     textHref: string,
     rootMo: MediaOverlayNode,
@@ -748,10 +788,12 @@ export class MediaOverlayModule implements ReaderModule {
         undefined
       );
     }
+
     if (moTextAudioPair) {
       if (moTextAudioPair.Audio) {
         log.log("playMediaOverlays() - playMediaOverlaysAudio()");
         this.mediaOverlayRoot = rootMo;
+        this.mediaOverlayGenerator = this.textAudioPairGenerator(rootMo);
         await this.playMediaOverlaysAudio(
           moTextAudioPair,
           undefined,
@@ -762,10 +804,12 @@ export class MediaOverlayModule implements ReaderModule {
       log.log("playMediaOverlays() - !moTextAudioPair " + textHref);
     }
   }
+
   ontimeupdate = async (_v: Event) => {
     log.log("ontimeupdate");
     this.trackCurrentTime();
   };
+
   ensureOnTimeUpdate = (remove: boolean, replace: boolean) => {
     if (remove) {
       if (this.__ontimeupdate) {

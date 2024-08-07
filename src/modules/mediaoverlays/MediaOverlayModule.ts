@@ -30,7 +30,7 @@ import {
 import * as HTMLUtilities from "../../utils/HTMLUtilities";
 import log from "loglevel";
 
-//log.setLevel("trace", true);
+log.setLevel("trace", true);
 // Media Overlays
 // Synchronized Narration
 // Synchronized Media
@@ -229,30 +229,6 @@ export class MediaOverlayModule implements ReaderModule {
         if (this.currentLinks.length > 1 && this.currentLinkIndex === 0) {
           this.currentLinkIndex++;
           log.log("startReadAloud(): kaller playLink()");
-          await this.playLink();
-        } else {
-          if (this.settings.autoTurn && this.settings.playing) {
-            this.navigator.nextResource();
-          } else {
-            await this.stopReadAloud();
-          }
-        }
-      }
-      if (
-        this.audioElement &&
-        this.currentLinks[this.currentLinkIndex]?.Properties.MediaOverlay
-      ) {
-        const timeToSeekTo = this.currentAudioBegin
-          ? this.currentAudioBegin
-          : 0;
-        this.audioElement.currentTime = timeToSeekTo;
-        await this.audioElement.play();
-        this.ensureOnTimeUpdate(false, true);
-        this.audioElement.volume = this.settings.volume;
-        this.audioElement.playbackRate = this.settings.rate;
-      } else {
-        if (this.currentLinks.length > 1 && this.currentLinkIndex === 0) {
-          this.currentLinkIndex++;
           await this.playLink();
         } else {
           if (this.settings.autoTurn && this.settings.playing) {

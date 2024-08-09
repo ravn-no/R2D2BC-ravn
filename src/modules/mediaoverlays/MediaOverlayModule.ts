@@ -212,7 +212,7 @@ export class MediaOverlayModule implements ReaderModule {
       this.settings.playing = true;
       if (
         this.audioElement &&
-        this.currentLinks[this.currentLinkIndex]?.Properties.MediaOverlay
+        this.currentLinks[this.currentLinkIndex]?.Properties?.MediaOverlay
       ) {
         log.log("startReadAloud(): audioElement finnes");
         const timeToSeekTo = this.currentAudioBegin

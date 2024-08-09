@@ -2031,6 +2031,9 @@ export class IFrameNavigator extends EventEmitter implements Navigator {
                   this.iframes[0].src = href;
                   if (this.iframes.length === 2) {
                     this.iframes[1].src = this.currentChapterLink.href;
+                    this.currentSpreadLinks.right = {
+                      href: this.currentChapterLink.href,
+                    };
                   }
                 } else {
                   fetch(href, this.requestConfig)

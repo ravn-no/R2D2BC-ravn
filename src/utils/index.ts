@@ -10,6 +10,6 @@ export function delay(t: number, v?: any): Promise<any> {
   });
 }
 
-const IS_DEV = true;
-  //process.env.NODE_ENV === "development" || process.env.NODE_ENV === "dev";
+const IS_DEV =
+  process.env.NODE_ENV === "development" || process.env.NODE_ENV === "dev";
 log.setLevel(IS_DEV ? "trace" : "warn", true);

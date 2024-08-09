@@ -1730,6 +1730,8 @@ export class IFrameNavigator extends EventEmitter implements Navigator {
     var even: boolean = (index ?? 0) % 2 === 1;
     this.showLoadingMessageAfterDelay();
 
+    this.currentSpreadLinks = {};
+
     function writeIframeDoc(content: string, href: string) {
       const parser = new DOMParser();
       const doc = parser.parseFromString(content, "application/xhtml+xml");
@@ -1990,6 +1992,9 @@ export class IFrameNavigator extends EventEmitter implements Navigator {
                     this.currentChapterLink.href
                   );
                 });
+              this.currentSpreadLinks.left = {
+                href: this.currentChapterLink.href,
+              };
               if (this.iframes.length === 2) {
                 if ((index ?? 0) < this.publication.readingOrder.length - 1) {
                   const next = this.publication.getNextSpineItem(

@@ -146,6 +146,8 @@ export async function searchDocDomSeek(
       let nodeValue = nextNode?.nodeValue;
       if (nodeValue) {
         accumulated += nodeValue.length;
+      } else {
+        if (accumulated === offset) break;
       }
     }
     localOffset = iter.referenceNode.nodeValue

@@ -876,10 +876,7 @@ export class MediaOverlayModule implements ReaderModule {
       current &&
       (this.publication.Metadata.Rendition?.Layout ?? "unknown") !== "fixed"
     ) {
-      current.scrollIntoView({
-        block: "center",
-        behavior: "smooth",
-      });
+      current.scrollIntoView(true);
     }
   }
 }

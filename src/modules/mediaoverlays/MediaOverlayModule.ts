@@ -29,6 +29,7 @@ import {
 } from "./MediaOverlaySettings";
 import * as HTMLUtilities from "../../utils/HTMLUtilities";
 import log from "loglevel";
+import { throttle } from 'lodash';
 
 log.setLevel("trace", true);
 // Media Overlays
@@ -876,7 +877,13 @@ export class MediaOverlayModule implements ReaderModule {
       current &&
       (this.publication.Metadata.Rendition?.Layout ?? "unknown") !== "fixed"
     ) {
-      current.scrollIntoView(true);
+      this.throttledScrollIntoView(current as HTMLElement);
     }
   }
+  private throttledScrollIntoView = throttle((element: HTMLElement) => {
+    element.scrollIntoView({
+      block: "center",
+      behavior: "smooth",
+    });
+  }, 500);
 }

@@ -219,6 +219,7 @@ export class MediaOverlayModule implements ReaderModule {
         const timeToSeekTo = this.currentAudioBegin
           ? this.currentAudioBegin
           : 0;
+        this.audioElement.load();
         this.audioElement.currentTime = timeToSeekTo;
         log.log("startReadAloud() currentTime = ", timeToSeekTo);
         await this.audioElement.play();

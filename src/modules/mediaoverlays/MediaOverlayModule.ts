@@ -398,10 +398,18 @@ export class MediaOverlayModule implements ReaderModule {
   myReq;
   trackCurrentTime() {
     cancelAnimationFrame(this.myReq);
-
     if (this.mediaOverlayTextAudioPair) {
       try {
-        if (
+        const beginEnd = this.getBeginEndFromNode(this.mediaOverlayTextAudioPair);
+        if ((beginEnd.begin && this.audioElement.currentTime < beginEnd.begin - 0.05) &&
+              !(this.currentAudioEnd &&this.audioElement.currentTime >= this.currentAudioEnd - 0.05)) {
+          // Rewind: Restart generator
+          if (this.mediaOverlayRoot) {
+            this.mediaOverlayGenerator = this.textAudioPairGenerator(this.mediaOverlayRoot);
+          }
+          this.mediaOverlaysNext(this.audioElement.currentTime);
+        }
+        else if (
           this.currentAudioEnd &&
           this.audioElement.currentTime >= this.currentAudioEnd - 0.05
         ) {

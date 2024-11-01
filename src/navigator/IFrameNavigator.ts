@@ -2219,27 +2219,9 @@ export class IFrameNavigator extends EventEmitter implements Navigator {
       ttsModule.speakPlay();
     }
   }
-  startReadAlong() {
-    if (
-      this.rights.enableMediaOverlays &&
-      this.mediaOverlayModule !== undefined &&
-      this.hasMediaOverlays
-    ) {
-      this.mediaOverlayModule?.startReadAloud();
-    }
-  }
   stopReadAloud() {
     if (this.rights.enableTTS) {
       this.highlighter?.stopReadAloud();
-    }
-  }
-  stopReadAlong() {
-    if (
-      this.rights.enableMediaOverlays &&
-      this.mediaOverlayModule !== undefined &&
-      this.hasMediaOverlays
-    ) {
-      this.mediaOverlayModule?.stopReadAloud();
     }
   }
 
@@ -2252,6 +2234,34 @@ export class IFrameNavigator extends EventEmitter implements Navigator {
       }
     }
   }
+
+  resumeReadAloud() {
+    if (this.rights.enableTTS) {
+      const ttsModule = this.ttsModule as TTSModule2;
+      ttsModule.speakResume();
+    }
+  }
+
+  startReadAlong() {
+    if (
+      this.rights.enableMediaOverlays &&
+      this.mediaOverlayModule !== undefined &&
+      this.hasMediaOverlays
+    ) {
+      this.mediaOverlayModule?.startReadAloud();
+    }
+  }
+
+  stopReadAlong() {
+    if (
+      this.rights.enableMediaOverlays &&
+      this.mediaOverlayModule !== undefined &&
+      this.hasMediaOverlays
+    ) {
+      this.mediaOverlayModule?.stopReadAloud();
+    }
+  }
+
   pauseReadAlong() {
     if (
       this.rights.enableMediaOverlays &&
@@ -2261,12 +2271,7 @@ export class IFrameNavigator extends EventEmitter implements Navigator {
       this.mediaOverlayModule?.pauseReadAloud();
     }
   }
-  resumeReadAloud() {
-    if (this.rights.enableTTS) {
-      const ttsModule = this.ttsModule as TTSModule2;
-      ttsModule.speakResume();
-    }
-  }
+
   resumeReadAlong() {
     if (
       this.rights.enableMediaOverlays &&
@@ -2276,6 +2281,27 @@ export class IFrameNavigator extends EventEmitter implements Navigator {
       this.mediaOverlayModule?.resumeReadAloud();
     }
   }
+
+  startBufferedReadAlong() {
+    if (
+      this.rights.enableMediaOverlays &&
+      this.mediaOverlayModule !== undefined &&
+      this.hasMediaOverlays
+    ) {
+      this.mediaOverlayModule?.startBufferedReadAloud();
+    }
+  }
+
+  stopBufferedReadAlong() {
+    if (
+      this.rights.enableMediaOverlays &&
+      this.mediaOverlayModule !== undefined &&
+      this.hasMediaOverlays
+    ) {
+      this.mediaOverlayModule?.stopBufferedReadAloud();
+    }
+  }
+
 
   totalResources(): number {
     return this.publication.readingOrder.length;
@@ -2337,6 +2363,14 @@ export class IFrameNavigator extends EventEmitter implements Navigator {
   nextResource(): any {
     this.handleNextChapterClick(undefined);
   }
+
+  nextResourceAsync(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.handleNextChapterClick(undefined);
+      resolve();
+    });
+  }
+
   goTo(locator: Locator): any {
     let locations: Locations = locator.locations ?? { progression: 0 };
     if (locator.href.indexOf("#") !== -1) {

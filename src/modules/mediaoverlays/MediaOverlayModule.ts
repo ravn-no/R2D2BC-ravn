@@ -303,6 +303,44 @@ export class MediaOverlayModule implements ReaderModule {
     }
   }
 
+  async skipToNextBufferedReadAloud() {
+    if (this.currentLinks.length > 1 && this.currentLinkIndex === 0) {
+      const currentTime = this.audioContext.currentTime;
+      this.source.stop(currentTime);
+      this.source.disconnect();
+      this.source.connect(this.audioContext.destination);
+      this.source.start(currentTime, currentTime + 10);
+      this.currentLinkIndex++;
+    } else {
+      this.source.stop();
+      this.source.disconnect();
+      this.soundBuffers = [];
+      await this.navigator.nextResourceAsync();
+      this.currentLinkIndex = 0;
+      this.currentLinks = this.navigator.currentLink();
+      await this.startBufferedReadAloud();
+    }
+  }
+
+  async skipToPreviousBufferedReadAloud() {
+    if (this.currentLinks.length > 1 && this.currentLinkIndex === 0) {
+      const currentTime = this.audioContext.currentTime;
+      this.source.stop(currentTime);
+      this.source.disconnect();
+      this.source.connect(this.audioContext.destination);
+      this.source.start(currentTime, currentTime - 10);
+      this.currentLinkIndex++;
+    } else {
+      this.source.stop();
+      this.source.disconnect();
+      this.soundBuffers = [];
+      await this.navigator.previousResourceAsync();
+      this.currentLinkIndex = 0;
+      this.currentLinks = this.navigator.currentLink();
+      await this.startBufferedReadAloud();
+    }
+  }
+
   async startReadAloud() {
     this.bufferedMode = false;
     if (this.navigator.rights.enableMediaOverlays) {

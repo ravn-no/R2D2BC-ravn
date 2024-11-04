@@ -2302,7 +2302,25 @@ export class IFrameNavigator extends EventEmitter implements Navigator {
     }
   }
 
+  nextBufferedReadAlong() {
+    if (
+      this.rights.enableMediaOverlays &&
+      this.mediaOverlayModule !== undefined &&
+      this.hasMediaOverlays
+    ) {
+      this.mediaOverlayModule?.skipToNextBufferedReadAloud();
+    }
+  }
 
+  previousBufferedReadAlong() {
+    if (
+      this.rights.enableMediaOverlays &&
+      this.mediaOverlayModule !== undefined &&
+      this.hasMediaOverlays
+    ) {
+      this.mediaOverlayModule?.skipToPreviousBufferedReadAloud();
+    }
+  }
   totalResources(): number {
     return this.publication.readingOrder.length;
   }
@@ -2362,6 +2380,13 @@ export class IFrameNavigator extends EventEmitter implements Navigator {
   }
   nextResource(): any {
     this.handleNextChapterClick(undefined);
+  }
+
+  async previousResourceAsync(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      this.handlePreviousChapterClick(undefined);
+      resolve();
+    });
   }
 
   nextResourceAsync(): Promise<void> {

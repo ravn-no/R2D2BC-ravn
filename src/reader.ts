@@ -504,6 +504,18 @@ export default class D2Reader {
     }
   };
 
+  nextBufferedReadAlong = () => {
+    if (this.navigator instanceof IFrameNavigator) {
+      this.navigator.nextBufferedReadAlong();
+    }
+  };
+
+  previousBufferedReadAlong = () => {
+    if (this.navigator instanceof IFrameNavigator) {
+      this.navigator.previousBufferedReadAlong();
+    }
+  };
+
   get hasMediaOverlays() {
     if (this.navigator instanceof IFrameNavigator) {
       return this.navigator.hasMediaOverlays;

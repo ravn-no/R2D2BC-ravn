@@ -924,8 +924,18 @@ export default class D2Reader {
   nextResource = () => {
     this.navigator.nextResource();
   };
+  nextResourceAsync = async () => {
+    if (this.navigator instanceof IFrameNavigator) {
+      await this.navigator.nextResourceAsync();
+    }
+  };
   previousResource = () => {
     this.navigator.previousResource();
+  };
+  previousResourceAsync = async () => {
+    if (this.navigator instanceof IFrameNavigator) {
+      await this.navigator.previousResourceAsync();
+    }
   };
   nextPage = async () => {
     this.navigator.nextPage();

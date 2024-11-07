@@ -2378,17 +2378,15 @@ export class IFrameNavigator extends EventEmitter implements Navigator {
   previousResource(): any {
     this.handlePreviousChapterClick(undefined);
   }
-  nextResource(): any {
-    this.handleNextChapterClick(undefined);
-  }
-
   async previousResourceAsync(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       this.handlePreviousChapterClick(undefined);
       resolve();
     });
   }
-
+  nextResource(): any {
+    this.handleNextChapterClick(undefined);
+  }
   nextResourceAsync(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
       this.handleNextChapterClick(undefined);

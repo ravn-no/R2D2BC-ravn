@@ -247,8 +247,27 @@ export class MediaOverlayModule implements ReaderModule {
     }
   }
 
+  async onEndedAction() {
+    return new Promise<void>(async (resolve) => {
+      if (this.currentLinks.length > 1 && this.currentLinkIndex === 0) {
+        this.currentLinkIndex++;
+        await this.loadAudioContext(this.currentLinks[this.currentLinkIndex]);
+        resolve();
+      } else {
+        if (this.settings.autoTurn && this.settings.playing) {
+          this.soundBuffers = [];
+          await this.navigator.nextResourceAsync();
+          this.currentLinkIndex = 0;
+          this.currentLinks = this.navigator.currentLink();
+          await this.startBufferedReadAloud();
+          resolve();
+        }
+      }
+    });
+  }
+
   async playBufferedReadAloud(buffer: AudioBuffer) {
-    return new Promise<void>((resolve) => {
+    return new Promise<void>(async (resolve) => {
       this.settings.playing = true;
       this.source = this.audioContext.createBufferSource();
       this.source.buffer = buffer;
@@ -256,20 +275,8 @@ export class MediaOverlayModule implements ReaderModule {
       this.source.start();
 
       this.source.onended = async () => {
-        if (this.currentLinks.length > 1 && this.currentLinkIndex === 0) {
-          this.currentLinkIndex++;
-          await this.loadAudioContext(this.currentLinks[this.currentLinkIndex]);
-          resolve();
-        } else {
-          if (this.settings.autoTurn && this.settings.playing) {
-            this.soundBuffers = [];
-            await this.navigator.nextResourceAsync();
-            this.currentLinkIndex = 0;
-            this.currentLinks = this.navigator.currentLink();
-            await this.startBufferedReadAloud();
-            resolve();
-          }
-        }
+        await this.onEndedAction();
+        resolve();
       };
     });
   }
@@ -304,41 +311,23 @@ export class MediaOverlayModule implements ReaderModule {
   }
 
   async skipToNextBufferedReadAloud() {
-    if (this.currentLinks.length > 1 && this.currentLinkIndex === 0) {
-      const currentTime = this.audioContext.currentTime;
-      this.source.stop(currentTime);
-      this.source.disconnect();
-      this.source.connect(this.audioContext.destination);
-      this.source.start(currentTime, currentTime + 10);
-      this.currentLinkIndex++;
-    } else {
-      this.source.stop();
-      this.source.disconnect();
-      this.soundBuffers = [];
-      await this.navigator.nextResourceAsync();
-      this.currentLinkIndex = 0;
-      this.currentLinks = this.navigator.currentLink();
-      await this.startBufferedReadAloud();
-    }
+    this.source.stop();
+    this.source.disconnect();
+    this.soundBuffers = [];
+    await this.navigator.nextResourceAsync();
+    this.currentLinkIndex = 0;
+    this.currentLinks = this.navigator.currentLink();
+    await this.startBufferedReadAloud();
   }
 
   async skipToPreviousBufferedReadAloud() {
-    if (this.currentLinks.length > 1 && this.currentLinkIndex === 0) {
-      const currentTime = this.audioContext.currentTime;
-      this.source.stop(currentTime);
-      this.source.disconnect();
-      this.source.connect(this.audioContext.destination);
-      this.source.start(currentTime, currentTime - 10);
-      this.currentLinkIndex++;
-    } else {
-      this.source.stop();
-      this.source.disconnect();
-      this.soundBuffers = [];
-      await this.navigator.previousResourceAsync();
-      this.currentLinkIndex = 0;
-      this.currentLinks = this.navigator.currentLink();
-      await this.startBufferedReadAloud();
-    }
+    this.source.stop();
+    this.source.disconnect();
+    this.soundBuffers = [];
+    await this.navigator.previousResourceAsync();
+    this.currentLinkIndex = 0;
+    this.currentLinks = this.navigator.currentLink();
+    await this.startBufferedReadAloud();
   }
 
   async startReadAloud() {

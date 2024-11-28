@@ -285,6 +285,9 @@ export class MediaOverlayModule implements ReaderModule {
     this.bufferedMode = true;
     if (this.navigator.rights.enableMediaOverlays) {
       this.settings.playing = true;
+      this.soundBuffers = [];
+      this.currentLinkIndex = 0;
+      this.currentLinks = this.navigator.currentLink();
       await this.loadAudioContext(this.currentLinks[this.currentLinkIndex]);
       if (this.soundBuffers.length > 0) {
         for (let buffer of this.soundBuffers) {

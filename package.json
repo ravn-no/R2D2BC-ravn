@@ -1,8 +1,8 @@
 {
-  "name": "@d-i-t-a/reader",
-  "version": "2.4.10",
+  "name": "@cappelendamm/r2d2bc",
+  "version": "2.4.10-cada.0",
   "description": "A viewer application for EPUB files.",
-  "repository": "https://github.com/d-i-t-a/R2D2BC",
+  "repository": "https://github.com/CappelenDamm/R2D2BC-cada",
   "license": "Apache-2.0",
   "main": "dist/esm/index.js",
   "typings": "dist/types/index.d.ts",
@@ -10,7 +10,7 @@
     "node": ">=16"
   },
   "publishConfig": {
-    "registry": "https://registry.npmjs.org/"
+    "registry": "https://npm.pkg.github.com"
   },
   "scripts": {
     "prepare": "npm run build",

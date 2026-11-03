@@ -90,6 +90,7 @@ export class MediaOverlayModule implements ReaderModule {
   private currentAudioUrl: string | undefined;
   private previousAudioUrl: string | undefined;
   private previousAudioEnd: number | undefined;
+  private oncanplaythrough: ((ev: Event) => void) | undefined;
   private mediaOverlayRoot: MediaOverlayNode | undefined;
   private mediaOverlayGenerator:
     | IterableIterator<MediaOverlayNode | undefined>
@@ -755,7 +756,8 @@ export class MediaOverlayModule implements ReaderModule {
             await this.playMediaOverlaysAudio(
               nextTextAudioPair as MediaOverlayNode,
               undefined,
-              undefined
+              undefined,
+              true
             );
           }, 0);
         }
@@ -814,7 +816,8 @@ export class MediaOverlayModule implements ReaderModule {
   async playMediaOverlaysAudio(
     moTextAudioPair: MediaOverlayNode,
     begin: number | undefined,
-    end: number | undefined
+    end: number | undefined,
+    seamless: boolean = false
   ) {
     log.log("playMediaOverlaysAudio()");
     this.mediaOverlayTextAudioPair = moTextAudioPair;
@@ -868,7 +871,7 @@ export class MediaOverlayModule implements ReaderModule {
                 setTimeout(async () => {
                   await self.audioElement.play();
                   self.ensureOnTimeUpdate(false, true);
-                }, self.settings.wait * 1000);
+                }, seamless ? 0 : self.settings.wait * 1000);
               }
             }
             checkReady();
@@ -898,7 +901,7 @@ export class MediaOverlayModule implements ReaderModule {
                     setTimeout(async () => {
                       await self.audioElement.play();
                       self.ensureOnTimeUpdate(false, true);
-                    }, self.settings.wait * 1000);
+                    }, seamless ? 0 : self.settings.wait * 1000);
                   }
                 }
                 checkReady();
@@ -940,70 +943,87 @@ export class MediaOverlayModule implements ReaderModule {
       ) as HTMLAudioElement;
 
       if (this.audioElement) {
+        // Gjenbruk audio-elementet ved bytte av lydfil. Et nyopprettet
+        // element er ikke "ulåst" av brukerens klikk (iOS Safari), så
+        // play() midt i en SMIL-sekvens kan ellers bli blokkert.
         this.audioElement.pause();
-        this.audioElement.setAttribute("src", "");
-        if (this.audioElement.parentNode) {
-          this.audioElement.parentNode.removeChild(this.audioElement);
-        }
+      } else {
+        this.audioElement = document.createElement("audio");
+        this.audioElement.setAttribute("style", "display: none");
+        this.audioElement.setAttribute("id", "AUDIO_MO_ID");
+        this.audioElement.setAttribute("role", "media-overlays");
+
+        document.body.appendChild(this.audioElement);
+
+        this.audioElement.addEventListener("error", (ev) => {
+          log.log(
+            "-1) error: " +
+            (this.currentAudioUrl !== (ev.currentTarget as HTMLAudioElement).src
+              ? this.currentAudioUrl + " -- "
+              : "") +
+            (ev.currentTarget as HTMLAudioElement).src.substring(
+              (ev.currentTarget as HTMLAudioElement).src.lastIndexOf("/")
+            )
+          );
+
+          if (this.audioElement && this.audioElement.error) {
+            // 1 === MEDIA_ERR_ABORTED
+            // 2 === MEDIA_ERR_NETWORK
+            // 3 === MEDIA_ERR_DECODE
+            // 4 === MEDIA_ERR_SRC_NOT_SUPPORTED
+            log.log(this.audioElement.error.code);
+            log.log(this.audioElement.error.message);
+          }
+        });
+
+        this.audioElement.addEventListener("ended", async (_ev: Event) => {
+          log.log("onended");
+          if (this.mediaOverlayRoot && this.mediaOverlayTextAudioPair) {
+            // SMIL-en kan ha egen lydfil per par (uten clipBegin/clipEnd);
+            // slutt på lydfilen betyr da neste par, ikke neste kapittel.
+            // mediaOverlaysNext() faller selv tilbake til neste ressurs
+            // eller stopp når SMIL-en er uttømt.
+            this.mediaOverlaysNext(0);
+          } else if (
+            this.currentLinks.length > 1 &&
+            this.currentLinkIndex === 0
+          ) {
+            this.currentLinkIndex++;
+            await this.playLink();
+          } else {
+            if (this.settings.autoTurn && this.settings.playing) {
+              this.audioElement.pause();
+              this.navigator.nextResource();
+            } else {
+              this.stopReadAloud();
+            }
+          }
+        });
       }
-      this.audioElement = document.createElement("audio");
-      this.audioElement.setAttribute("style", "display: none");
-      this.audioElement.setAttribute("id", "AUDIO_MO_ID");
-      this.audioElement.setAttribute("role", "media-overlays");
       this.audioElement.volume = this.settings.volume;
       this.audioElement.playbackRate = this.settings.rate;
 
-      document.body.appendChild(this.audioElement);
-
-      this.audioElement.addEventListener("error", (ev) => {
-        log.log(
-          "-1) error: " +
-          (this.currentAudioUrl !== (ev.currentTarget as HTMLAudioElement).src
-            ? this.currentAudioUrl + " -- "
-            : "") +
-          (ev.currentTarget as HTMLAudioElement).src.substring(
-            (ev.currentTarget as HTMLAudioElement).src.lastIndexOf("/")
-          )
+      if (this.oncanplaythrough) {
+        this.audioElement.removeEventListener(
+          "canplaythrough",
+          this.oncanplaythrough
         );
-
-        if (this.audioElement && this.audioElement.error) {
-          // 1 === MEDIA_ERR_ABORTED
-          // 2 === MEDIA_ERR_NETWORK
-          // 3 === MEDIA_ERR_DECODE
-          // 4 === MEDIA_ERR_SRC_NOT_SUPPORTED
-          log.log(this.audioElement.error.code);
-          log.log(this.audioElement.error.message);
-        }
-      });
-
+      }
       const oncanplaythrough = async (ev: Event) => {
         const currentAudioElement = ev.currentTarget as HTMLAudioElement;
         currentAudioElement.removeEventListener(
           "canplaythrough",
           oncanplaythrough
         );
+        if (this.oncanplaythrough === oncanplaythrough) {
+          this.oncanplaythrough = undefined;
+        }
         log.log("oncanplaythrough");
         await playClip(true);
       };
+      this.oncanplaythrough = oncanplaythrough;
       this.audioElement.addEventListener("canplaythrough", oncanplaythrough);
 
-      const onended = async (_ev: Event) => {
-        log.log("onended");
-        if (this.currentLinks.length > 1 && this.currentLinkIndex === 0) {
-          this.currentLinkIndex++;
-          await this.playLink();
-        } else {
-          if (this.settings.autoTurn && this.settings.playing) {
-            this.audioElement.pause();
-            this.navigator.nextResource();
-          } else {
-            this.stopReadAloud();
-          }
-        }
-      };
-      this.audioElement.addEventListener("ended", onended);
-
-      this.audioElement.playbackRate = this.settings.rate;
       this.audioElement.setAttribute("src", this.currentAudioUrl);
     } else {
       log.log("playMediaOverlaysAudio() - playClip()");
@@ -1048,6 +1068,16 @@ export class MediaOverlayModule implements ReaderModule {
         log.log("playMediaOverlays() - playMediaOverlaysAudio()");
         this.mediaOverlayRoot = rootMo;
         this.mediaOverlayGenerator = this.textAudioPairGenerator(rootMo);
+        // Spol generatoren frem til startparet, slik at neste next() gir
+        // paret etter det som spilles nå. Uten dette spilles startparet to
+        // ganger i bøker uten clipBegin/clipEnd (der tidsfilteret i
+        // mediaOverlaysNext() ikke kan hoppe over allerede spilte par).
+        while (true) {
+          const next = this.mediaOverlayGenerator.next();
+          if (next.done || next.value === moTextAudioPair) {
+            break;
+          }
+        }
         await this.playMediaOverlaysAudio(
           moTextAudioPair,
           undefined,

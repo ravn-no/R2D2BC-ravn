@@ -90,7 +90,7 @@ export class MediaOverlayModule implements ReaderModule {
   private currentAudioUrl: string | undefined;
   private previousAudioUrl: string | undefined;
   private previousAudioEnd: number | undefined;
-  private oncanplaythrough: ((ev: Event) => void) | undefined;
+  private oncanplay: ((ev: Event) => void) | undefined;
   private mediaOverlayRoot: MediaOverlayNode | undefined;
   private mediaOverlayGenerator:
     | IterableIterator<MediaOverlayNode | undefined>
@@ -869,8 +869,16 @@ export class MediaOverlayModule implements ReaderModule {
               } else {
                 /* do something */
                 setTimeout(async () => {
-                  await self.audioElement.play();
-                  self.ensureOnTimeUpdate(false, true);
+                  try {
+                    await self.audioElement.play();
+                    self.ensureOnTimeUpdate(false, true);
+                  } catch (error) {
+                    log.error(
+                      "Media overlay audio playback failed",
+                      self.currentAudioUrl,
+                      error
+                    );
+                  }
                 }, seamless ? 0 : self.settings.wait * 1000);
               }
             }
@@ -899,8 +907,16 @@ export class MediaOverlayModule implements ReaderModule {
                   } else {
                     /* do something */
                     setTimeout(async () => {
-                      await self.audioElement.play();
-                      self.ensureOnTimeUpdate(false, true);
+                      try {
+                        await self.audioElement.play();
+                        self.ensureOnTimeUpdate(false, true);
+                      } catch (error) {
+                        log.error(
+                          "Media overlay audio playback failed",
+                          self.currentAudioUrl,
+                          error
+                        );
+                      }
                     }, seamless ? 0 : self.settings.wait * 1000);
                   }
                 }
@@ -1003,26 +1019,28 @@ export class MediaOverlayModule implements ReaderModule {
       this.audioElement.volume = this.settings.volume;
       this.audioElement.playbackRate = this.settings.rate;
 
-      if (this.oncanplaythrough) {
+      if (this.oncanplay) {
         this.audioElement.removeEventListener(
-          "canplaythrough",
-          this.oncanplaythrough
+          "canplay",
+          this.oncanplay
         );
       }
-      const oncanplaythrough = async (ev: Event) => {
+      // Start as soon as playback is possible. Firefox may remain at
+      // HAVE_FUTURE_DATA without firing canplaythrough for short remote clips.
+      const oncanplay = async (ev: Event) => {
         const currentAudioElement = ev.currentTarget as HTMLAudioElement;
         currentAudioElement.removeEventListener(
-          "canplaythrough",
-          oncanplaythrough
+          "canplay",
+          oncanplay
         );
-        if (this.oncanplaythrough === oncanplaythrough) {
-          this.oncanplaythrough = undefined;
+        if (this.oncanplay === oncanplay) {
+          this.oncanplay = undefined;
         }
-        log.log("oncanplaythrough");
+        log.log("oncanplay");
         await playClip(true);
       };
-      this.oncanplaythrough = oncanplaythrough;
-      this.audioElement.addEventListener("canplaythrough", oncanplaythrough);
+      this.oncanplay = oncanplay;
+      this.audioElement.addEventListener("canplay", oncanplay);
 
       this.audioElement.setAttribute("src", this.currentAudioUrl);
     } else {
